@@ -24,7 +24,8 @@ pipeline {
             steps {
                 sh '''
                     echo "Starting Flask app..."
-                    nohup python3 backend.py > flask.log 2>&1 &
+                    nohup python3 backend.py > flask.log 2>&1
+                    sh 'sleep 300' // keep the process running for 5 min
                     sleep 10
                     echo "Flask log output:"
                     cat flask.log

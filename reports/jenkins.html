@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vulnerability Report</title>
+
+    <!-- Template Metadata-->
+    <meta name="author" content="grype">
+    <meta name="version" content="1.0.0">
+
+    <!-- Source datatables.js and its dependencies -->
+    <link
+        href="https://cdn.datatables.net/v/dt/jq-3.7.0/jszip-3.10.1/dt-2.0.3/b-3.0.1/b-html5-3.0.1/b-print-3.0.1/r-3.0.1/datatables.min.css"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script
+        src="https://cdn.datatables.net/v/dt/jq-3.7.0/jszip-3.10.1/dt-2.0.3/b-3.0.1/b-html5-3.0.1/b-print-3.0.1/r-3.0.1/datatables.min.js"></script>
+
+    <!-- Page & Main Container -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .main-container {
+            width: 90%;
+            max-width: 1200px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            margin: 20px;
+        }
+    </style>
+    <!-- Header Container -->
+    <style>
+        .heading {
+            display: flex;
+            justify-content: space-between;
+            /* Aligns children to the far left and far right */
+            align-items: center;
+            /* Centers children vertically within the container */
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #e8f0fe;
+            /* Muted blue background */
+            color: #495057;
+            /* Dark gray text color */
+        }
+
+        .heading-left,
+        .heading-right {
+            display: flex;
+            flex-direction: column;
+            /* Organizes children vertically */
+            align-items: flex-start;
+            /* Aligns text and other content to the start */
+        }
+
+        .heading-right {
+            align-items: flex-end;
+            /* Aligns the image to the far right */
+            padding-right: 20px;
+            /* Adds padding to the right of the .heading-right container */
+        }
+
+        .heading-right img {
+            width: 70px;
+            height: auto;
+        }
+
+        .heading-left h1,
+        .heading-left p {
+            padding-left: 20px;
+            margin: 4px 0;
+            /* Reduces the vertical margin to tighten the spacing */
+        }
+    </style>
+    <!-- Severity Information Container -->
+    <style>
+        .severity-info {
+            display: flex;
+            justify-content: space-around;
+            /* Evenly spaces the severity boxes */
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .severity-box {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            /* Stack children vertically */
+            justify-content: space-between;
+            /* Space between the title and count */
+            align-items: center;
+            /* Center align items horizontally */
+            text-align: center;
+            padding: 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+            /* Necessary for absolute positioning of children */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* Smooth transitions for interactive effects */
+        }
+
+        .severity-title {
+            font-size: 0.8em;
+            position: absolute;
+            /* Positioning it absolutely to stick to the bottom */
+            bottom: 10px;
+            /* Distance from the bottom of the container */
+            width: 100%;
+            /* Ensure it spans the width of the box */
+            color: rgba(255, 255, 255, 0.9);
+            /* Light color for visibility */
+        }
+
+        .severity-count {
+            font-size: 3em;
+            /* Increasing font size for better visibility and impact */
+            margin-bottom: 20px;
+            /* Ensures space between the count and the bottom-positioned title */
+            color: #fff;
+            /* Ensuring text is always white for visibility */
+        }
+
+        .severity-box.active {
+            border: 2px solid #007bff;
+            /* Highlight active box */
+        }
+
+        /* Example ID-based styles, ensure to add similar styles for each severity level */
+        #critical {
+            background-color: #d9534f;
+        }
+
+        #high {
+            background-color: #f0ad4e;
+        }
+
+        #medium {
+            background-color: #5bc0de;
+        }
+
+        #low {
+            background-color: #5cb85c;
+        }
+
+        #unknown {
+            background-color: #777;
+        }
+
+        .severity-box:hover {
+            transform: translateY(-5px);
+            /* Creates a subtle "pop" effect */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            /* Adds depth on hover */
+        }
+    </style>
+    <!-- Table Control & Datatables Wrapper -->
+    <style>
+        .dataTables_wrapper {
+            display: flex;
+            justify-content: space-between;
+            /* Ensures maximum space between items */
+            align-items: center;
+            /* Vertically centers items in the container */
+            padding: 10px;
+            background: #f8f9fa;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Apply order properties to reposition elements visually */
+        .dt-buttons {
+            order: 2;
+            /* Places buttons on the right */
+            flex-grow: 1;
+            display: flex;
+            justify-content: flex-end;
+            /* Aligns buttons to the right */
+        }
+
+        .dataTables_filter {
+            order: 1;
+            /* Places search on the left */
+            flex-grow: 1;
+        }
+
+        .dataTables_filter label {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dataTables_filter input {
+            width: 100%;
+            /* Allows the input to take full width of its container */
+            padding: 8px;
+            margin-left: 5px;
+            /* Provides a little space after the label */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .button {
+            padding: 8px 16px;
+            font-size: 14px;
+            color: white;
+            background-color: #007bff;
+            /* Primary blue */
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        @media screen and (max-width: 768px) {
+
+            .dataTables_wrapper .dt-buttons,
+            .dataTables_wrapper .dataTables_filter {
+                float: none;
+                text-align: center;
+                margin: 10px auto;
+                /* Centers and adds margin */
+                display: block;
+                /* each takes full width */
+                width: 90%;
+                /* less than full width for padding */
+            }
+        }
+    </style>
+    <!-- Table Container -->
+    <style>
+        .data-table {
+            background-color: #f8f9fa;
+            /* Light grey background for consistency with other sections */
+            padding: 20px;
+            /* Padding around the DataTable for spacing */
+            margin: 10px 0;
+            /* Margin to separate it from other elements */
+            border-radius: 5px;
+            /* Rounded corners for the container */
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            /* Subtle shadow for depth */
+            overflow-x: auto;
+            /* Allows horizontal scrolling for overflow */
+        }
+
+        table.display {
+            width: 100%;
+            /* Ensures the table fills its container */
+            border-collapse: collapse;
+            /* Neat borders */
+            table-layout: fixed;
+            /* Uniform column sizing */
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            /* Adequate padding for content */
+            text-align: left;
+            /* Align text to the left */
+            border-bottom: 1px solid #ddd;
+            /* Light grey border for each row */
+        }
+
+        th {
+            background-color: #e2e3e5;
+            /* Lighter grey for headers to stand out */
+            font-weight: bold;
+            /* Bold text for headers */
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+            /* Highlight for rows on hover */
+        }
+
+        /* Dont use a list format for the fixed-in column */
+        .fixed-in ul {
+            list-style-type: none;
+            /* Removes bullet points */
+            padding: 0;
+            /* Removes padding */
+            margin: 0;
+            /* Removes margin */
+        }
+
+        .fixed-in li {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+    <!-- Severity Coloring -->
+    <style>
+        .severity-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            /* make the pill shape */
+            color: white;
+            /* Text color */
+            text-align: center;
+        }
+
+        .critical {
+            background-color: #d9534f;
+        }
+
+        .high {
+            background-color: #f0ad4e;
+        }
+
+        .medium {
+            background-color: #5bc0de;
+        }
+
+        .low {
+            background-color: #5cb85c;
+        }
+
+        .unknown {
+            background-color: #777;
+        }
+    </style>
+    <!-- State Coloring -->
+    <style>
+        .state-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            /* make the pill shape */
+            color: white;
+            /* Text color */
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .fixed {
+            background-color: #d9534f;
+        }
+
+        .not-fixed {
+            background-color: #f0ad4e;
+        }
+
+        .unknown {
+            background-color: #6c757d;
+        }
+
+        .wont-fix {
+            background-color: #5cb85c;
+        }
+    </style>
+
+</head>
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+<body>
+    <div class="main-container">
+        <div class="heading">
+            <div class="heading-left">
+                <h1>Container Vulnerability Report</h1>
+                <p><strong>Name: </strong>jenkins/jenkins</p>
+                <p><strong>Type:</strong> image</p>
+                <p><strong>Date:</strong> <span id="dateElement">2025-04-23T11:27:23.879343+05:30</span></p>
+            </div>
+            <div class="heading-right">
+                <img src="https://user-images.githubusercontent.com/5199289/136855393-d0a9eef9-ccf1-4e2b-9d7c-7aad16a567e5.png"
+                    alt="Grype Logo">
+            </div>
+        </div>
+        <div class="severity-info">
+            <div class="severity-box" id="critical">
+                <div class="severity-title">Critical</div>
+                <div class="severity-count" id="criticalCount">2</div>
+            </div>
+            <div class="severity-box" id="high">
+                <div class="severity-title">High</div>
+                <div class="severity-count" id="highCount">9</div>
+            </div>
+            <div class="severity-box" id="medium">
+                <div class="severity-title">Medium</div>
+                <div class="severity-count" id="mediumCount">35</div>
+            </div>
+            <div class="severity-box" id="low">
+                <div class="severity-title">Low</div>
+                <div class="severity-count" id="lowCount">18</div>
+            </div>
+            <div class="severity-box" id="unknown">
+                <div class="severity-title">Unknown</div>
+                <div class="severity-count" id="unknownCount">4</div>
+            </div>
+        </div>
+        <div class="data-table">
+            <table id="vulnerabilityTable" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Version</th>
+                        <th>Type</th>
+                        <th>Vulnerability</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                        <th>State</th>
+                        <th>Fixed In</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>coreutils</td>
+                        <td>9.1-1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2016-2781">CVE-2016-2781</a>
+                        </td>
+                        <td>Low</td>
+                        <td>chroot in GNU coreutils, when used with --userspec, allows local users to escape to the parent session via a crafted TIOCSTI ioctl call, which pushes characters to the terminal&#39;s input buffer.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>dirmngr</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>eddsa</td>
+                        <td>0.3.0</td>
+                        <td>java-archive</td>
+                        <td>
+                            <a href="https://github.com/advisories/GHSA-p53j-g8pw-4w5f">GHSA-p53j-g8pw-4w5f</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Ed25519 Signature Malleability in ed25519-java Due to Missing Scalar Range Check</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg-l10n</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg-utils</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>golang.org/x/crypto</td>
+                        <td>v0.21.0</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://github.com/advisories/GHSA-v778-237x-gjrc">GHSA-v778-237x-gjrc</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>Misuse of ServerConfig.PublicKeyCallback may cause authorization bypass in golang.org/x/crypto</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>0.31.0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>golang.org/x/crypto</td>
+                        <td>v0.21.0</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://github.com/advisories/GHSA-hcg3-q754-cr77">GHSA-hcg3-q754-cr77</a>
+                        </td>
+                        <td>High</td>
+                        <td>golang.org/x/crypto Vulnerable to Denial of Service (DoS) via Slow or Incomplete Key Exchange</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>0.35.0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>golang.org/x/net</td>
+                        <td>v0.23.0</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://github.com/advisories/GHSA-qxp5-gwg8-xv66">GHSA-qxp5-gwg8-xv66</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>HTTP Proxy bypass using IPv6 Zone IDs in golang.org/x/net</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>0.36.0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>golang.org/x/net</td>
+                        <td>v0.23.0</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://github.com/advisories/GHSA-vvgc-356p-c3xw">GHSA-vvgc-356p-c3xw</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>golang.org/x/net vulnerable to Cross-site Scripting</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>0.38.0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-agent</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-wks-client</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-wks-server</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgconf</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgsm</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgv</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libcap2</td>
+                        <td>1:2.66-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-1390">CVE-2025-1390</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The PAM module pam_cap.so of libcap configuration supports group names starting with “@”, during actual parsing, configurations not starting with “@” are incorrectly recognized as group names. This may result in nonintended users being granted an inherited capability set, potentially leading to security risks. Attackers can exploit this vulnerability to achieve local privilege escalation on systems where /etc/security/capability.conf is used to configure user inherited privileges by constructing specific usernames.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libexpat1</td>
+                        <td>2.5.0-1+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-52425">CVE-2023-52425</a>
+                        </td>
+                        <td>High</td>
+                        <td>libexpat through 2.5.0 allows a denial of service (resource consumption) because many full reparsings are required in the case of a large token for which multiple buffer fills are needed.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libexpat1</td>
+                        <td>2.5.0-1+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-8176">CVE-2024-8176</a>
+                        </td>
+                        <td>High</td>
+                        <td>A stack overflow vulnerability exists in the libexpat library due to the way it handles recursive entity expansion in XML documents. When parsing an XML document with deeply nested entity references, libexpat can be forced to recurse indefinitely, exhausting the stack space and causing a crash. This issue could lead to denial of service (DoS) or, in some cases, exploitable memory corruption, depending on the environment and library usage.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libexpat1</td>
+                        <td>2.5.0-1+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-50602">CVE-2024-50602</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>An issue was discovered in libexpat before 2.6.4. There is a crash within the XML_ResumeParser function because XML_StopParser can stop/suspend an unstarted parser.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libldap-2.5-0</td>
+                        <td>2.5.13+dfsg-5</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-2953">CVE-2023-2953</a>
+                        </td>
+                        <td>High</td>
+                        <td>A vulnerability was found in openldap. This security flaw causes a null pointer dereference in ber_memalloc_x() function.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libncursesw6</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules-bin</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules-bin</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-runtime</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-runtime</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam0g</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam0g</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libperl5.36</td>
+                        <td>5.36.0-7+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libproc2-0</td>
+                        <td>2:4.0.2-3</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4016">CVE-2023-4016</a>
+                        </td>
+                        <td>Low</td>
+                        <td>Under some circumstances, this weakness allows a user who has access to run the “ps” utility on a machine, the ability to write almost unlimited amounts of unfiltered data into the process heap.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libsqlite3-0</td>
+                        <td>3.40.1-2+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-29088">CVE-2025-29088</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>In SQLite 3.49.0 before 3.49.1, certain argument values to sqlite3_db_config (in the C-language API) can cause a denial of service (application crash). An sz*nBig multiplication is not cast to a 64-bit integer, and consequently some memory allocations may be incorrect.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libssl3</td>
+                        <td>3.0.15-1~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-13176">CVE-2024-13176</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Issue summary: A timing side-channel which could potentially allow recovering the private key exists in the ECDSA signature computation.  Impact summary: A timing side-channel in ECDSA signature computations could allow recovering the private key by an attacker. However, measuring the timing would require either local access to the signing application or a very fast network connection with low latency.  There is a timing signal of around 300 nanoseconds when the top word of the inverted ECDSA nonce value is zero. This can happen with significant probability only for some of the supported elliptic curves. In particular the NIST P-521 curve is affected. To be able to measure this leak, the attacker process must either be located in the same physical computer or must have a very fast network connection with low latency. For that reason the severity of this vulnerability is Low.  The FIPS modules in 3.4, 3.3, 3.2, 3.1 and 3.0 are affected by this issue.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libtinfo6</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4641">CVE-2023-4641</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A flaw was found in shadow-utils. When asking for a new password, shadow-utils asks the password twice. If the password fails on the second attempt, shadow-utils fails in cleaning the buffer used to store the first entry. This may allow an attacker with enough access to retrieve the password from the memory.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-29383">CVE-2023-29383</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In Shadow 4.13, it is possible to inject control characters into fields provided to the SUID program chfn (change finger). Although it is not possible to exploit this directly (e.g., adding a new user fails because \n is in the block list), it is possible to misrepresent the /etc/passwd file when viewed. Use of \r manipulations and Unicode characters to work around blocking of the : character make it possible to give the impression that a new user has been added. In other words, an adversary may be able to convince a system administrator to take the system offline (an indirect, social-engineered denial of service) by demonstrating that &#34;cat /etc/passwd&#34; shows a rogue user account.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56433">CVE-2024-56433</a>
+                        </td>
+                        <td>Low</td>
+                        <td>shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g., uid 100000 through 165535 for the first user account) that can realistically conflict with the uids of users defined on locally administered networks, potentially leading to account takeover, e.g., by leveraging newuidmap for access to an NFS home directory (or same-host resources in the case of remote logins by these local network users). NOTE: it may also be argued that system administrators should not have assigned uids, within local networks, that are within the range that can occur in /etc/subuid.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ncurses-base</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ncurses-bin</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>openjdk</td>
+                        <td>17.0.14</td>
+                        <td>binary</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-21587">CVE-2025-21587</a>
+                        </td>
+                        <td>High</td>
+                        <td>Vulnerability in the Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition product of Oracle Java SE (component: JSSE).  Supported versions that are affected are Oracle Java SE:8u441, 8u441-perf, 11.0.26, 17.0.14, 21.0.6, 24; Oracle GraalVM for JDK:17.0.14, 21.0.6, 24; Oracle GraalVM Enterprise Edition:20.3.17 and  21.3.13. Difficult to exploit vulnerability allows unauthenticated attacker with network access via multiple protocols to compromise Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition.  Successful attacks of this vulnerability can result in  unauthorized creation, deletion or modification access to critical data or all Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition accessible data as well as  unauthorized access to critical data or complete access to all Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition accessible data. Note: This vulnerability can be exploited by using APIs in the specified Component, e.g., through a web service which supplies data to the APIs. This vulnerability also applies to Java deployments, typically in clients running sandboxed Java Web Start applications or sandboxed Java applets, that load and run untrusted code (e.g., code that comes from the internet) and rely on the Java sandbox for security. CVSS 3.1 Base Score 7.4 (Confidentiality and Integrity impacts).  CVSS Vector: (CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N).</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.8.0_452</li>
+                                <li>8.0.452</li>
+                                <li>11.0.27</li>
+                                <li>17.0.15</li>
+                                <li>21.0.7</li>
+                                <li>24.0.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>openjdk</td>
+                        <td>17.0.14</td>
+                        <td>binary</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-30698">CVE-2025-30698</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Vulnerability in the Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition product of Oracle Java SE (component: 2D).  Supported versions that are affected are Oracle Java SE: 8u441, 8u441-perf, 11.0.26, 17.0.14, 21.0.6, 24; Oracle GraalVM for JDK: 17.0.14, 21.0.6, 24; Oracle GraalVM Enterprise Edition: 20.3.17 and  21.3.13. Difficult to exploit vulnerability allows unauthenticated attacker with network access via multiple protocols to compromise Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition.  Successful attacks of this vulnerability can result in  unauthorized update, insert or delete access to some of Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition accessible data as well as  unauthorized read access to a subset of Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition accessible data and unauthorized ability to cause a partial denial of service (partial DOS) of Oracle Java SE, Oracle GraalVM for JDK, Oracle GraalVM Enterprise Edition. Note: This vulnerability applies to Java deployments, typically in clients running sandboxed Java Web Start applications or sandboxed Java applets, that load and run untrusted code (e.g., code that comes from the internet) and rely on the Java sandbox for security. This vulnerability does not apply to Java deployments, typically in servers, that load and run only trusted code (e.g., code installed by an administrator). CVSS 3.1 Base Score 5.6 (Confidentiality, Integrity and Availability impacts).  CVSS Vector: (CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L).</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.8.0_452</li>
+                                <li>8.0.452</li>
+                                <li>11.0.27</li>
+                                <li>17.0.15</li>
+                                <li>21.0.7</li>
+                                <li>24.0.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>openssh-client</td>
+                        <td>1:9.2p1-2+deb12u5</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-32728">CVE-2025-32728</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>In sshd in OpenSSH before 10.0, the DisableForwarding directive does not adhere to the documentation stating that it disables X11 and agent forwarding.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>openssl</td>
+                        <td>3.0.15-1~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-13176">CVE-2024-13176</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Issue summary: A timing side-channel which could potentially allow recovering the private key exists in the ECDSA signature computation.  Impact summary: A timing side-channel in ECDSA signature computations could allow recovering the private key by an attacker. However, measuring the timing would require either local access to the signing application or a very fast network connection with low latency.  There is a timing signal of around 300 nanoseconds when the top word of the inverted ECDSA nonce value is zero. This can happen with significant probability only for some of the supported elliptic curves. In particular the NIST P-521 curve is affected. To be able to measure this leak, the attacker process must either be located in the same physical computer or must have a very fast network connection with low latency. For that reason the severity of this vulnerability is Low.  The FIPS modules in 3.4, 3.3, 3.2, 3.1 and 3.0 are affected by this issue.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4641">CVE-2023-4641</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A flaw was found in shadow-utils. When asking for a new password, shadow-utils asks the password twice. If the password fails on the second attempt, shadow-utils fails in cleaning the buffer used to store the first entry. This may allow an attacker with enough access to retrieve the password from the memory.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-29383">CVE-2023-29383</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In Shadow 4.13, it is possible to inject control characters into fields provided to the SUID program chfn (change finger). Although it is not possible to exploit this directly (e.g., adding a new user fails because \n is in the block list), it is possible to misrepresent the /etc/passwd file when viewed. Use of \r manipulations and Unicode characters to work around blocking of the : character make it possible to give the impression that a new user has been added. In other words, an adversary may be able to convince a system administrator to take the system offline (an indirect, social-engineered denial of service) by demonstrating that &#34;cat /etc/passwd&#34; shows a rogue user account.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56433">CVE-2024-56433</a>
+                        </td>
+                        <td>Low</td>
+                        <td>shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g., uid 100000 through 165535 for the first user account) that can realistically conflict with the uids of users defined on locally administered networks, potentially leading to account takeover, e.g., by leveraging newuidmap for access to an NFS home directory (or same-host resources in the case of remote logins by these local network users). NOTE: it may also be argued that system administrators should not have assigned uids, within local networks, that are within the range that can occur in /etc/subuid.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl</td>
+                        <td>5.36.0-7+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-base</td>
+                        <td>5.36.0-7+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-modules-5.36</td>
+                        <td>5.36.0-7+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>procps</td>
+                        <td>2:4.0.2-3</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4016">CVE-2023-4016</a>
+                        </td>
+                        <td>Low</td>
+                        <td>Under some circumstances, this weakness allows a user who has access to run the “ps” utility on a machine, the ability to write almost unlimited amounts of unfiltered data into the process heap.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.23.3</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-22871">CVE-2025-22871</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The net/http package improperly accepts a bare LF as a line terminator in chunked data chunk-size lines. This can permit request smuggling if a net/http server is used in conjunction with a server that incorrectly accepts a bare LF as part of a chunk-ext.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.23.8</li>
+                                <li>1.24.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.23.3</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-45336">CVE-2024-45336</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The HTTP client drops sensitive headers after following a cross-domain redirect. For example, a request to a.com/ containing an Authorization header which is redirected to b.com/ will not send that header to b.com. In the event that the client received a subsequent same-domain redirect, however, the sensitive headers would be restored. For example, a chain of redirects from a.com/, to b.com/1, and finally to b.com/2 would incorrectly send the Authorization header to b.com/2.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.11</li>
+                                <li>1.23.5</li>
+                                <li>1.24.0-rc.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.23.3</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-45341">CVE-2024-45341</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A certificate with a URI which has a IPv6 address with a zone ID may incorrectly satisfy a URI name constraint that applies to the certificate chain. Certificates containing URIs are not permitted in the web PKI, so this only affects users of private PKIs which make use of URIs.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.11</li>
+                                <li>1.23.5</li>
+                                <li>1.24.0-rc.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.23.3</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-22866">CVE-2025-22866</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Due to the usage of a variable time instruction in the assembly implementation of an internal function, a small number of bits of secret scalars are leaked on the ppc64le architecture. Due to the way this function is used, we do not believe this leakage is enough to allow recovery of the private key when P-256 is used in any well known protocols.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.12</li>
+                                <li>1.23.6</li>
+                                <li>1.24.0-rc.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initializeDataTable();
+            prettyTimestamp();
+        });
+
+        function prettyTimestamp() {
+            var dateString = document.getElementById("dateElement").textContent;
+            var date = new Date(dateString);
+
+            // Format date to a more human-readable form
+            var formattedDate = date.toLocaleDateString("en-US", {
+                weekday: "long", // "Monday"
+                year: "numeric", // "2024"
+                month: "long", // "April"
+                day: "numeric", // "12"
+            });
+
+            var formattedTime = date.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true, // Use AM/PM
+            });
+
+            // Update the content of the div with formatted date and time
+            document.getElementById("dateElement").textContent =
+                formattedDate + " at " + formattedTime;
+        }
+        function initializeDataTable() {
+            var table = $('#vulnerabilityTable').DataTable({
+                responsive: true,
+                dom: '<"dataTables_wrapper"Bf>t<"dataTables_control"ip>',
+                buttons: [
+                    { extend: 'pdfHtml5', text: 'Export to PDF' }
+                ],
+                columnDefs: getColumnDefs()
+            });
+
+            setupSeverityClickHandler(table);
+        }
+
+        function getColumnDefs() {
+            return [
+                {
+                    targets: 5,
+                    className: 'none'
+                },
+                {
+                    targets: 4, // Index of 'Severity' Column
+                    render: function (data, type, row) {
+                        const severityClasses = {
+                            'Critical': 'critical',
+                            'High': 'high',
+                            'Medium': 'medium',
+                            'Low': 'low',
+                            'Unknown': 'unknown'
+                        };
+                        var className = severityClasses[data] || 'unknown';
+                        return '<span class="severity-pill ' + className + '">' + data + '</span>';
+                    }
+                },
+                {
+                    targets: 6, // Index of 'State' Column
+                    render: function (data, type, row) {
+                        const stateClasses = {
+                            'fixed': 'fixed',
+                            'not-fixed': 'not-fixed',
+                            'unknown': 'unknown',
+                            'wont-fix': 'wont-fix'
+                        };
+                        var className = stateClasses[data] || data; // Default to data if no match
+                        return '<span class="state-pill ' + className + '">' + data + '</span>';
+                    }
+                },
+                {
+                    targets: 7, // Index of 'Fixed In'
+                    createdCell: function (td, cellData, rowData, row, col) {
+                        $(td).addClass('fixed-in'); // Adds a class to support styling
+                    }
+                }
+            ];
+        }
+
+        function setupSeverityClickHandler(table) {
+            var currentFilter = '';
+            $('.severity-box').on('click', function () {
+                var severity = $(this).find('.severity-title').text().trim();
+                if (severity === currentFilter) {
+                    table.search('').columns().search('').draw();
+                    currentFilter = '';
+                    $('.severity-box').removeClass('active');
+                } else {
+                    $('.severity-box').removeClass('active');
+                    $(this).addClass('active');
+                    table.search('').columns().search('');
+                    table.column(4).search(severity).draw();
+                    currentFilter = severity;
+                }
+            });
+        }
+
+    </script>
+
+
+
+</body>
+
+</html>

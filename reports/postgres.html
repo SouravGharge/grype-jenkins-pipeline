@@ -1,0 +1,2807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vulnerability Report</title>
+
+    <!-- Template Metadata-->
+    <meta name="author" content="grype">
+    <meta name="version" content="1.0.0">
+
+    <!-- Source datatables.js and its dependencies -->
+    <link
+        href="https://cdn.datatables.net/v/dt/jq-3.7.0/jszip-3.10.1/dt-2.0.3/b-3.0.1/b-html5-3.0.1/b-print-3.0.1/r-3.0.1/datatables.min.css"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script
+        src="https://cdn.datatables.net/v/dt/jq-3.7.0/jszip-3.10.1/dt-2.0.3/b-3.0.1/b-html5-3.0.1/b-print-3.0.1/r-3.0.1/datatables.min.js"></script>
+
+    <!-- Page & Main Container -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .main-container {
+            width: 90%;
+            max-width: 1200px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            margin: 20px;
+        }
+    </style>
+    <!-- Header Container -->
+    <style>
+        .heading {
+            display: flex;
+            justify-content: space-between;
+            /* Aligns children to the far left and far right */
+            align-items: center;
+            /* Centers children vertically within the container */
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #e8f0fe;
+            /* Muted blue background */
+            color: #495057;
+            /* Dark gray text color */
+        }
+
+        .heading-left,
+        .heading-right {
+            display: flex;
+            flex-direction: column;
+            /* Organizes children vertically */
+            align-items: flex-start;
+            /* Aligns text and other content to the start */
+        }
+
+        .heading-right {
+            align-items: flex-end;
+            /* Aligns the image to the far right */
+            padding-right: 20px;
+            /* Adds padding to the right of the .heading-right container */
+        }
+
+        .heading-right img {
+            width: 70px;
+            height: auto;
+        }
+
+        .heading-left h1,
+        .heading-left p {
+            padding-left: 20px;
+            margin: 4px 0;
+            /* Reduces the vertical margin to tighten the spacing */
+        }
+    </style>
+    <!-- Severity Information Container -->
+    <style>
+        .severity-info {
+            display: flex;
+            justify-content: space-around;
+            /* Evenly spaces the severity boxes */
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .severity-box {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            /* Stack children vertically */
+            justify-content: space-between;
+            /* Space between the title and count */
+            align-items: center;
+            /* Center align items horizontally */
+            text-align: center;
+            padding: 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+            /* Necessary for absolute positioning of children */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* Smooth transitions for interactive effects */
+        }
+
+        .severity-title {
+            font-size: 0.8em;
+            position: absolute;
+            /* Positioning it absolutely to stick to the bottom */
+            bottom: 10px;
+            /* Distance from the bottom of the container */
+            width: 100%;
+            /* Ensure it spans the width of the box */
+            color: rgba(255, 255, 255, 0.9);
+            /* Light color for visibility */
+        }
+
+        .severity-count {
+            font-size: 3em;
+            /* Increasing font size for better visibility and impact */
+            margin-bottom: 20px;
+            /* Ensures space between the count and the bottom-positioned title */
+            color: #fff;
+            /* Ensuring text is always white for visibility */
+        }
+
+        .severity-box.active {
+            border: 2px solid #007bff;
+            /* Highlight active box */
+        }
+
+        /* Example ID-based styles, ensure to add similar styles for each severity level */
+        #critical {
+            background-color: #d9534f;
+        }
+
+        #high {
+            background-color: #f0ad4e;
+        }
+
+        #medium {
+            background-color: #5bc0de;
+        }
+
+        #low {
+            background-color: #5cb85c;
+        }
+
+        #unknown {
+            background-color: #777;
+        }
+
+        .severity-box:hover {
+            transform: translateY(-5px);
+            /* Creates a subtle "pop" effect */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            /* Adds depth on hover */
+        }
+    </style>
+    <!-- Table Control & Datatables Wrapper -->
+    <style>
+        .dataTables_wrapper {
+            display: flex;
+            justify-content: space-between;
+            /* Ensures maximum space between items */
+            align-items: center;
+            /* Vertically centers items in the container */
+            padding: 10px;
+            background: #f8f9fa;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Apply order properties to reposition elements visually */
+        .dt-buttons {
+            order: 2;
+            /* Places buttons on the right */
+            flex-grow: 1;
+            display: flex;
+            justify-content: flex-end;
+            /* Aligns buttons to the right */
+        }
+
+        .dataTables_filter {
+            order: 1;
+            /* Places search on the left */
+            flex-grow: 1;
+        }
+
+        .dataTables_filter label {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dataTables_filter input {
+            width: 100%;
+            /* Allows the input to take full width of its container */
+            padding: 8px;
+            margin-left: 5px;
+            /* Provides a little space after the label */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .button {
+            padding: 8px 16px;
+            font-size: 14px;
+            color: white;
+            background-color: #007bff;
+            /* Primary blue */
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        @media screen and (max-width: 768px) {
+
+            .dataTables_wrapper .dt-buttons,
+            .dataTables_wrapper .dataTables_filter {
+                float: none;
+                text-align: center;
+                margin: 10px auto;
+                /* Centers and adds margin */
+                display: block;
+                /* each takes full width */
+                width: 90%;
+                /* less than full width for padding */
+            }
+        }
+    </style>
+    <!-- Table Container -->
+    <style>
+        .data-table {
+            background-color: #f8f9fa;
+            /* Light grey background for consistency with other sections */
+            padding: 20px;
+            /* Padding around the DataTable for spacing */
+            margin: 10px 0;
+            /* Margin to separate it from other elements */
+            border-radius: 5px;
+            /* Rounded corners for the container */
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            /* Subtle shadow for depth */
+            overflow-x: auto;
+            /* Allows horizontal scrolling for overflow */
+        }
+
+        table.display {
+            width: 100%;
+            /* Ensures the table fills its container */
+            border-collapse: collapse;
+            /* Neat borders */
+            table-layout: fixed;
+            /* Uniform column sizing */
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            /* Adequate padding for content */
+            text-align: left;
+            /* Align text to the left */
+            border-bottom: 1px solid #ddd;
+            /* Light grey border for each row */
+        }
+
+        th {
+            background-color: #e2e3e5;
+            /* Lighter grey for headers to stand out */
+            font-weight: bold;
+            /* Bold text for headers */
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+            /* Highlight for rows on hover */
+        }
+
+        /* Dont use a list format for the fixed-in column */
+        .fixed-in ul {
+            list-style-type: none;
+            /* Removes bullet points */
+            padding: 0;
+            /* Removes padding */
+            margin: 0;
+            /* Removes margin */
+        }
+
+        .fixed-in li {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+    <!-- Severity Coloring -->
+    <style>
+        .severity-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            /* make the pill shape */
+            color: white;
+            /* Text color */
+            text-align: center;
+        }
+
+        .critical {
+            background-color: #d9534f;
+        }
+
+        .high {
+            background-color: #f0ad4e;
+        }
+
+        .medium {
+            background-color: #5bc0de;
+        }
+
+        .low {
+            background-color: #5cb85c;
+        }
+
+        .unknown {
+            background-color: #777;
+        }
+    </style>
+    <!-- State Coloring -->
+    <style>
+        .state-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            /* make the pill shape */
+            color: white;
+            /* Text color */
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .fixed {
+            background-color: #d9534f;
+        }
+
+        .not-fixed {
+            background-color: #f0ad4e;
+        }
+
+        .unknown {
+            background-color: #6c757d;
+        }
+
+        .wont-fix {
+            background-color: #5cb85c;
+        }
+    </style>
+
+</head>
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+<body>
+    <div class="main-container">
+        <div class="heading">
+            <div class="heading-left">
+                <h1>Container Vulnerability Report</h1>
+                <p><strong>Name: </strong>postgres</p>
+                <p><strong>Type:</strong> image</p>
+                <p><strong>Date:</strong> <span id="dateElement">2025-04-23T12:32:06.809596+05:30</span></p>
+            </div>
+            <div class="heading-right">
+                <img src="https://user-images.githubusercontent.com/5199289/136855393-d0a9eef9-ccf1-4e2b-9d7c-7aad16a567e5.png"
+                    alt="Grype Logo">
+            </div>
+        </div>
+        <div class="severity-info">
+            <div class="severity-box" id="critical">
+                <div class="severity-title">Critical</div>
+                <div class="severity-count" id="criticalCount">8</div>
+            </div>
+            <div class="severity-box" id="high">
+                <div class="severity-title">High</div>
+                <div class="severity-count" id="highCount">44</div>
+            </div>
+            <div class="severity-box" id="medium">
+                <div class="severity-title">Medium</div>
+                <div class="severity-count" id="mediumCount">49</div>
+            </div>
+            <div class="severity-box" id="low">
+                <div class="severity-title">Low</div>
+                <div class="severity-count" id="lowCount">19</div>
+            </div>
+            <div class="severity-box" id="unknown">
+                <div class="severity-title">Unknown</div>
+                <div class="severity-count" id="unknownCount">4</div>
+            </div>
+        </div>
+        <div class="data-table">
+            <table id="vulnerabilityTable" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Version</th>
+                        <th>Type</th>
+                        <th>Vulnerability</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                        <th>State</th>
+                        <th>Fixed In</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>coreutils</td>
+                        <td>9.1-1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2016-2781">CVE-2016-2781</a>
+                        </td>
+                        <td>Low</td>
+                        <td>chroot in GNU coreutils, when used with --userspec, allows local users to escape to the parent session via a crafted TIOCSTI ioctl call, which pushes characters to the terminal&#39;s input buffer.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>dirmngr</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg-l10n</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gnupg-utils</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-agent</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-wks-client</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpg-wks-server</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgconf</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgsm</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>gpgv</td>
+                        <td>2.2.40-1.1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-30258">CVE-2025-30258</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data that lacks a valid backsig or that has incorrect usage flags, the user loses the ability to verify signatures made from certain other signing keys, aka a &#34;verification DoS.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libcap2</td>
+                        <td>1:2.66-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-1390">CVE-2025-1390</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The PAM module pam_cap.so of libcap configuration supports group names starting with “@”, during actual parsing, configurations not starting with “@” are incorrectly recognized as group names. This may result in nonintended users being granted an inherited capability set, potentially leading to security risks. Attackers can exploit this vulnerability to achieve local privilege escalation on systems where /etc/security/capability.conf is used to configure user inherited privileges by constructing specific usernames.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libgssapi-krb5-2</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libk5crypto3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5-3</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-26462">CVE-2024-26462</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Kerberos 5 (aka krb5) 1.21.2 contains a memory leak vulnerability in /krb5/src/kdc/ndr.c.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-3576">CVE-2025-3576</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability in the MIT Kerberos implementation allows GSSAPI-protected messages using RC4-HMAC-MD5 to be spoofed due to weaknesses in the MD5 checksum design. If RC4 is preferred over stronger encryption types, an attacker could exploit MD5 collisions to forge message integrity codes. This may lead to unauthorized message tampering.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libkrb5support0</td>
+                        <td>1.20.1-2+deb12u2</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24528">CVE-2025-24528</a>
+                        </td>
+                        <td>Unknown</td>
+                        <td></td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libldap-2.5-0</td>
+                        <td>2.5.13+dfsg-5</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-2953">CVE-2023-2953</a>
+                        </td>
+                        <td>High</td>
+                        <td>A vulnerability was found in openldap. This security flaw causes a null pointer dereference in ber_memalloc_x() function.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libllvm19</td>
+                        <td>1:19.1.4-1~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-7883">CVE-2024-7883</a>
+                        </td>
+                        <td>Low</td>
+                        <td>When using Arm Cortex-M Security Extensions (CMSE), Secure stack  contents can be leaked to Non-secure state via floating-point registers  when a Secure to Non-secure function call is made that returns a  floating-point value and when this is the first use of floating-point  since entering Secure state. This allows an attacker to read a limited  quantity of Secure stack contents with an impact on confidentiality.  This issue is specific to code generated using LLVM-based compilers.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libncursesw6</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules-bin</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-modules-bin</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-runtime</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam-runtime</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam0g</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-10041">CVE-2024-10041</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A vulnerability was found in PAM. The secret information is stored in memory, where the attacker can trigger the victim program to execute by sending characters to its standard input (stdin). As this occurs, the attacker can train the branch predictor to execute an ROP chain speculatively. This flaw could result in leaked passwords, such as those found in /etc/shadow while performing authentications.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libpam0g</td>
+                        <td>1.5.2-6+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-22365">CVE-2024-22365</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>linux-pam (aka Linux PAM) before 1.6.0 allows attackers to cause a denial of service (blocked login process) via mkfifo because the openat call (for protect_dir) lacks O_DIRECTORY.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libperl5.36</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libperl5.36</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56406">CVE-2024-56406</a>
+                        </td>
+                        <td>High</td>
+                        <td>A heap buffer overflow vulnerability was discovered in Perl.   Release branches 5.34, 5.36, 5.38 and 5.40 are affected, including development versions from 5.33.1 through 5.41.10.  When there are non-ASCII bytes in the left-hand-side of the `tr` operator, `S_do_trans_invmap` can overflow the destination pointer `d`.     $ perl -e &#39;$_ = &#34;\x{FF}&#34; x 1000000; tr/\xFF/\x{100}/;&#39;     Segmentation fault (core dumped)  It is believed that this vulnerability can enable Denial of Service and possibly Code Execution attacks on platforms that lack sufficient defenses.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>5.36.0-7+deb12u2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libsqlite3-0</td>
+                        <td>3.40.1-2+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-29088">CVE-2025-29088</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>In SQLite 3.49.0 before 3.49.1, certain argument values to sqlite3_db_config (in the C-language API) can cause a denial of service (application crash). An sz*nBig multiplication is not cast to a 64-bit integer, and consequently some memory allocations may be incorrect.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libssl3</td>
+                        <td>3.0.15-1~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-13176">CVE-2024-13176</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Issue summary: A timing side-channel which could potentially allow recovering the private key exists in the ECDSA signature computation.  Impact summary: A timing side-channel in ECDSA signature computations could allow recovering the private key by an attacker. However, measuring the timing would require either local access to the signing application or a very fast network connection with low latency.  There is a timing signal of around 300 nanoseconds when the top word of the inverted ECDSA nonce value is zero. This can happen with significant probability only for some of the supported elliptic curves. In particular the NIST P-521 curve is affected. To be able to measure this leak, the attacker process must either be located in the same physical computer or must have a very fast network connection with low latency. For that reason the severity of this vulnerability is Low.  The FIPS modules in 3.4, 3.3, 3.2, 3.1 and 3.0 are affected by this issue.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libtinfo6</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2022-49043">CVE-2022-49043</a>
+                        </td>
+                        <td>High</td>
+                        <td>xmlXIncludeAddNode in xinclude.c in libxml2 before 2.11.0 has a use-after-free.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-25062">CVE-2024-25062</a>
+                        </td>
+                        <td>High</td>
+                        <td>An issue was discovered in libxml2 before 2.11.7 and 2.12.x before 2.12.5. When using the XML Reader interface with DTD validation and XInclude expansion enabled, processing crafted XML documents can lead to an xmlValidatePopElement use-after-free.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56171">CVE-2024-56171</a>
+                        </td>
+                        <td>High</td>
+                        <td>libxml2 before 2.12.10 and 2.13.x before 2.13.6 has a use-after-free in xmlSchemaIDCFillNodeTables and xmlSchemaBubbleIDCNodeTables in xmlschemas.c. To exploit this, a crafted XML document must be validated against an XML schema with certain identity constraints, or a crafted XML schema must be used.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-24928">CVE-2025-24928</a>
+                        </td>
+                        <td>High</td>
+                        <td>libxml2 before 2.12.10 and 2.13.x before 2.13.6 has a stack-based buffer overflow in xmlSnprintfElements in valid.c. To exploit this, DTD validation must occur for an untrusted document or untrusted DTD. NOTE: this is similar to CVE-2017-9047.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-27113">CVE-2025-27113</a>
+                        </td>
+                        <td>High</td>
+                        <td>libxml2 before 2.12.10 and 2.13.x before 2.13.6 has a NULL pointer dereference in xmlPatMatch in pattern.c.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-39615">CVE-2023-39615</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Xmlsoft Libxml2 v2.11.0 was discovered to contain an out-of-bounds read via the xmlSAX2StartElement() function at /libxml2/SAX2.c. This vulnerability allows attackers to cause a Denial of Service (DoS) via supplying a crafted XML file. NOTE: the vendor&#39;s position is that the product does not support the legacy SAX1 interface with custom callbacks; there is a crash even without crafted input.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-45322">CVE-2023-45322</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>libxml2 through 2.11.5 has a use-after-free that can only occur after a certain memory allocation fails. This occurs in xmlUnlinkNode in tree.c. NOTE: the vendor&#39;s position is &#34;I don&#39;t think these issues are critical enough to warrant a CVE ID ... because an attacker typically can&#39;t control when memory allocations fail.&#34;</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-32414">CVE-2025-32414</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>In libxml2 before 2.13.8 and 2.14.x before 2.14.2, out-of-bounds memory access can occur in the Python API (Python bindings) because of an incorrect return value. This occurs in xmlPythonFileRead and xmlPythonFileReadRaw because of a difference between bytes and characters.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>libxml2</td>
+                        <td>2.9.14+dfsg-1.3~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2025-32415">CVE-2025-32415</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In libxml2 before 2.13.8 and 2.14.x before 2.14.2, xmlSchemaIDCFillNodeTables in xmlschemas.c has a heap-based buffer under-read. To exploit this, a crafted XML document must be validated against an XML schema with certain identity constraints, or a crafted XML schema must be used.</td>
+                        <td>not-fixed</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4641">CVE-2023-4641</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A flaw was found in shadow-utils. When asking for a new password, shadow-utils asks the password twice. If the password fails on the second attempt, shadow-utils fails in cleaning the buffer used to store the first entry. This may allow an attacker with enough access to retrieve the password from the memory.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-29383">CVE-2023-29383</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In Shadow 4.13, it is possible to inject control characters into fields provided to the SUID program chfn (change finger). Although it is not possible to exploit this directly (e.g., adding a new user fails because \n is in the block list), it is possible to misrepresent the /etc/passwd file when viewed. Use of \r manipulations and Unicode characters to work around blocking of the : character make it possible to give the impression that a new user has been added. In other words, an adversary may be able to convince a system administrator to take the system offline (an indirect, social-engineered denial of service) by demonstrating that &#34;cat /etc/passwd&#34; shows a rogue user account.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>login</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56433">CVE-2024-56433</a>
+                        </td>
+                        <td>Low</td>
+                        <td>shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g., uid 100000 through 165535 for the first user account) that can realistically conflict with the uids of users defined on locally administered networks, potentially leading to account takeover, e.g., by leveraging newuidmap for access to an NFS home directory (or same-host resources in the case of remote logins by these local network users). NOTE: it may also be argued that system administrators should not have assigned uids, within local networks, that are within the range that can occur in /etc/subuid.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ncurses-base</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ncurses-bin</td>
+                        <td>6.4-4</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-50495">CVE-2023-50495</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>NCurse v6.4-20230418 was discovered to contain a segmentation fault via the component _nc_wrap_entry().</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>openssl</td>
+                        <td>3.0.15-1~deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-13176">CVE-2024-13176</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Issue summary: A timing side-channel which could potentially allow recovering the private key exists in the ECDSA signature computation.  Impact summary: A timing side-channel in ECDSA signature computations could allow recovering the private key by an attacker. However, measuring the timing would require either local access to the signing application or a very fast network connection with low latency.  There is a timing signal of around 300 nanoseconds when the top word of the inverted ECDSA nonce value is zero. This can happen with significant probability only for some of the supported elliptic curves. In particular the NIST P-521 curve is affected. To be able to measure this leak, the attacker process must either be located in the same physical computer or must have a very fast network connection with low latency. For that reason the severity of this vulnerability is Low.  The FIPS modules in 3.4, 3.3, 3.2, 3.1 and 3.0 are affected by this issue.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-4641">CVE-2023-4641</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A flaw was found in shadow-utils. When asking for a new password, shadow-utils asks the password twice. If the password fails on the second attempt, shadow-utils fails in cleaning the buffer used to store the first entry. This may allow an attacker with enough access to retrieve the password from the memory.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-29383">CVE-2023-29383</a>
+                        </td>
+                        <td>Low</td>
+                        <td>In Shadow 4.13, it is possible to inject control characters into fields provided to the SUID program chfn (change finger). Although it is not possible to exploit this directly (e.g., adding a new user fails because \n is in the block list), it is possible to misrepresent the /etc/passwd file when viewed. Use of \r manipulations and Unicode characters to work around blocking of the : character make it possible to give the impression that a new user has been added. In other words, an adversary may be able to convince a system administrator to take the system offline (an indirect, social-engineered denial of service) by demonstrating that &#34;cat /etc/passwd&#34; shows a rogue user account.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>passwd</td>
+                        <td>1:4.13+dfsg1-1+b1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56433">CVE-2024-56433</a>
+                        </td>
+                        <td>Low</td>
+                        <td>shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g., uid 100000 through 165535 for the first user account) that can realistically conflict with the uids of users defined on locally administered networks, potentially leading to account takeover, e.g., by leveraging newuidmap for access to an NFS home directory (or same-host resources in the case of remote logins by these local network users). NOTE: it may also be argued that system administrators should not have assigned uids, within local networks, that are within the range that can occur in /etc/subuid.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56406">CVE-2024-56406</a>
+                        </td>
+                        <td>High</td>
+                        <td>A heap buffer overflow vulnerability was discovered in Perl.   Release branches 5.34, 5.36, 5.38 and 5.40 are affected, including development versions from 5.33.1 through 5.41.10.  When there are non-ASCII bytes in the left-hand-side of the `tr` operator, `S_do_trans_invmap` can overflow the destination pointer `d`.     $ perl -e &#39;$_ = &#34;\x{FF}&#34; x 1000000; tr/\xFF/\x{100}/;&#39;     Segmentation fault (core dumped)  It is believed that this vulnerability can enable Denial of Service and possibly Code Execution attacks on platforms that lack sufficient defenses.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>5.36.0-7+deb12u2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-base</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-base</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56406">CVE-2024-56406</a>
+                        </td>
+                        <td>High</td>
+                        <td>A heap buffer overflow vulnerability was discovered in Perl.   Release branches 5.34, 5.36, 5.38 and 5.40 are affected, including development versions from 5.33.1 through 5.41.10.  When there are non-ASCII bytes in the left-hand-side of the `tr` operator, `S_do_trans_invmap` can overflow the destination pointer `d`.     $ perl -e &#39;$_ = &#34;\x{FF}&#34; x 1000000; tr/\xFF/\x{100}/;&#39;     Segmentation fault (core dumped)  It is believed that this vulnerability can enable Denial of Service and possibly Code Execution attacks on platforms that lack sufficient defenses.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>5.36.0-7+deb12u2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-modules-5.36</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2023-31484">CVE-2023-31484</a>
+                        </td>
+                        <td>High</td>
+                        <td>CPAN.pm before 2.35 does not verify TLS certificates when downloading distributions over HTTPS.</td>
+                        <td>wont-fix</td>
+                        <td>
+                            N/A
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>perl-modules-5.36</td>
+                        <td>5.36.0-7+deb12u1</td>
+                        <td>deb</td>
+                        <td>
+                            <a href="https://security-tracker.debian.org/tracker/CVE-2024-56406">CVE-2024-56406</a>
+                        </td>
+                        <td>High</td>
+                        <td>A heap buffer overflow vulnerability was discovered in Perl.   Release branches 5.34, 5.36, 5.38 and 5.40 are affected, including development versions from 5.33.1 through 5.41.10.  When there are non-ASCII bytes in the left-hand-side of the `tr` operator, `S_do_trans_invmap` can overflow the destination pointer `d`.     $ perl -e &#39;$_ = &#34;\x{FF}&#34; x 1000000; tr/\xFF/\x{100}/;&#39;     Segmentation fault (core dumped)  It is believed that this vulnerability can enable Denial of Service and possibly Code Execution attacks on platforms that lack sufficient defenses.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>5.36.0-7+deb12u2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24531">CVE-2023-24531</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>Command go env is documented as outputting a shell script containing the Go environment. However, go env doesn&#39;t sanitize values, so executing its output as a shell script can cause various bad bahaviors, including executing arbitrary commands or inserting new environment variables. This issue is relatively minor because, in general, if an attacker can set arbitrary environment variables on a system, they have better attack vectors than making &#34;go env&#34; print them out.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.0-0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24538">CVE-2023-24538</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>Templates do not properly consider backticks (`) as Javascript string delimiters, and do not escape them as expected. Backticks are used, since ES6, for JS template literals. If a template contains a Go template action within a Javascript template literal, the contents of the action can be used to terminate the literal, injecting arbitrary Javascript code into the Go template. As ES6 template literals are rather complex, and themselves can do string interpolation, the decision was made to simply disallow Go template actions from being used inside of them (e.g. &#34;var a = {{.}}&#34;), since there is no obviously safe way to allow this behavior. This takes the same approach as github.com/google/safehtml. With fix, Template.Parse returns an Error when it encounters templates like this, with an ErrorCode of value 12. This ErrorCode is currently unexported, but will be exported in the release of Go 1.21. Users who rely on the previous behavior can re-enable it using the GODEBUG flag jstmpllitinterp=1, with the caveat that backticks will now be escaped. This should be used with caution.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.8</li>
+                                <li>1.20.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24540">CVE-2023-24540</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>Not all valid JavaScript whitespace characters are considered to be whitespace. Templates containing whitespace characters outside of the character set &#34;\t\n\f\r\u0020\u2028\u2029&#34; in JavaScript contexts that also contain actions may not be properly sanitized during execution.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.9</li>
+                                <li>1.20.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29402">CVE-2023-29402</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The go command may generate unexpected code at build time when using cgo. This may result in unexpected behavior when running a go program which uses cgo. This may occur when running an untrusted module which contains directories with newline characters in their names. Modules which are retrieved using the go command, i.e. via &#34;go get&#34;, are not affected (modules retrieved using GOPATH-mode, i.e. GO111MODULE=off, may be affected).</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.10</li>
+                                <li>1.20.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29404">CVE-2023-29404</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The go command may execute arbitrary code at build time when using cgo. This may occur when running &#34;go get&#34; on a malicious module, or when running any other command which builds untrusted code. This is can by triggered by linker flags, specified via a &#34;#cgo LDFLAGS&#34; directive. The arguments for a number of flags which are non-optional are incorrectly considered optional, allowing disallowed flags to be smuggled through the LDFLAGS sanitization. This affects usage of both the gc and gccgo compilers.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.10</li>
+                                <li>1.20.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29405">CVE-2023-29405</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The go command may execute arbitrary code at build time when using cgo. This may occur when running &#34;go get&#34; on a malicious module, or when running any other command which builds untrusted code. This is can by triggered by linker flags, specified via a &#34;#cgo LDFLAGS&#34; directive. Flags containing embedded spaces are mishandled, allowing disallowed flags to be smuggled through the LDFLAGS sanitization by including them in the argument of another flag. This only affects usage of the gccgo compiler.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.10</li>
+                                <li>1.20.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24790">CVE-2024-24790</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The various Is methods (IsPrivate, IsLoopback, etc) did not work as expected for IPv4-mapped IPv6 addresses, returning false for addresses which would return true in their traditional IPv4 forms.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.11</li>
+                                <li>1.22.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-22871">CVE-2025-22871</a>
+                        </td>
+                        <td>Critical</td>
+                        <td>The net/http package improperly accepts a bare LF as a line terminator in chunked data chunk-size lines. This can permit request smuggling if a net/http server is used in conjunction with a server that incorrectly accepts a bare LF as part of a chunk-ext.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.23.8</li>
+                                <li>1.24.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-27664">CVE-2022-27664</a>
+                        </td>
+                        <td>High</td>
+                        <td>In net/http in Go before 1.18.6 and 1.19.x before 1.19.1, attackers can cause a denial of service because an HTTP/2 connection can hang during closing if shutdown were preempted by a fatal error.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.18.6</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-28131">CVE-2022-28131</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Decoder.Skip in encoding/xml before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via a deeply nested XML document.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-2879">CVE-2022-2879</a>
+                        </td>
+                        <td>High</td>
+                        <td>Reader.Read does not set a limit on the maximum size of file headers. A maliciously crafted archive could cause Read to allocate unbounded amounts of memory, potentially causing resource exhaustion or panics. After fix, Reader.Read limits the maximum size of header blocks to 1 MiB.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.18.7</li>
+                                <li>1.19.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-2880">CVE-2022-2880</a>
+                        </td>
+                        <td>High</td>
+                        <td>Requests forwarded by ReverseProxy include the raw query parameters from the inbound request, including unparsable parameters rejected by net/http. This could permit query parameter smuggling when a Go proxy forwards a parameter with an unparsable value. After fix, ReverseProxy sanitizes the query parameters in the forwarded query when the outbound request&#39;s Form field is set after the ReverseProxy. Director function returns, indicating that the proxy has parsed the query parameters. Proxies which do not parse query parameters continue to forward the original query parameters unchanged.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.18.7</li>
+                                <li>1.19.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30580">CVE-2022-30580</a>
+                        </td>
+                        <td>High</td>
+                        <td>Code injection in Cmd.Start in os/exec before Go 1.17.11 and Go 1.18.3 allows execution of any binaries in the working directory named either &#34;..com&#34; or &#34;..exe&#34; by calling Cmd.Run, Cmd.Start, Cmd.Output, or Cmd.CombinedOutput when Cmd.Path is unset.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.11</li>
+                                <li>1.18.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30630">CVE-2022-30630</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Glob in io/fs before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via a path which contains a large number of path separators.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30631">CVE-2022-30631</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Reader.Read in compress/gzip before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via an archive containing a large number of concatenated 0-length compressed files.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30632">CVE-2022-30632</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Glob in path/filepath before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via a path containing a large number of path separators.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30633">CVE-2022-30633</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Unmarshal in encoding/xml before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via unmarshalling an XML document into a Go struct which has a nested field that uses the &#39;any&#39; field tag.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30635">CVE-2022-30635</a>
+                        </td>
+                        <td>High</td>
+                        <td>Uncontrolled recursion in Decoder.Decode in encoding/gob before Go 1.17.12 and Go 1.18.4 allows an attacker to cause a panic due to stack exhaustion via a message which contains deeply nested structures.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-32189">CVE-2022-32189</a>
+                        </td>
+                        <td>High</td>
+                        <td>A too-short encoded message can cause a panic in Float.GobDecode and Rat GobDecode in math/big in Go before 1.17.13 and 1.18.5, potentially allowing a denial of service.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.13</li>
+                                <li>1.18.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-41715">CVE-2022-41715</a>
+                        </td>
+                        <td>High</td>
+                        <td>Programs which compile regular expressions from untrusted sources may be vulnerable to memory exhaustion or denial of service. The parsed regexp representation is linear in the size of the input, but in some cases the constant factor can be as high as 40,000, making relatively small regexps consume much larger amounts of memory. After fix, each regexp being parsed is limited to a 256 MB memory footprint. Regular expressions whose representation would use more space than that are rejected. Normal use of regular expressions is unaffected.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.18.7</li>
+                                <li>1.19.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-41723">CVE-2022-41723</a>
+                        </td>
+                        <td>High</td>
+                        <td>A maliciously crafted HTTP/2 stream could cause excessive CPU consumption in the HPACK decoder, sufficient to cause a denial of service from a small number of small requests.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.6</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-41724">CVE-2022-41724</a>
+                        </td>
+                        <td>High</td>
+                        <td>Large handshake records may cause panics in crypto/tls. Both clients and servers may send large TLS handshake records which cause servers and clients, respectively, to panic when attempting to construct responses. This affects all TLS 1.3 clients, TLS 1.2 clients which explicitly enable session resumption (by setting Config.ClientSessionCache to a non-nil value), and TLS 1.3 servers which request client certificates (by setting Config.ClientAuth &gt;= RequestClientCert).</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.6</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-41725">CVE-2022-41725</a>
+                        </td>
+                        <td>High</td>
+                        <td>A denial of service is possible from excessive resource consumption in net/http and mime/multipart. Multipart form parsing with mime/multipart.Reader.ReadForm can consume largely unlimited amounts of memory and disk files. This also affects form parsing in the net/http package with the Request methods FormFile, FormValue, ParseMultipartForm, and PostFormValue. ReadForm takes a maxMemory parameter, and is documented as storing &#34;up to maxMemory bytes +10MB (reserved for non-file parts) in memory&#34;. File parts which cannot be stored in memory are stored on disk in temporary files. The unconfigurable 10MB reserved for non-file parts is excessively large and can potentially open a denial of service vector on its own. However, ReadForm did not properly account for all memory consumed by a parsed form, such as map entry overhead, part names, and MIME headers, permitting a maliciously crafted form to consume well over 10MB. In addition, ReadForm contained no limit on the number of disk files created, permitting a relatively small request body to create a large number of disk temporary files. With fix, ReadForm now properly accounts for various forms of memory overhead, and should now stay within its documented limit of 10MB + maxMemory bytes of memory consumption. Users should still be aware that this limit is high and may still be hazardous. In addition, ReadForm now creates at most one on-disk temporary file, combining multiple form parts into a single temporary file. The mime/multipart.File interface type&#39;s documentation states, &#34;If stored on disk, the File&#39;s underlying concrete type will be an *os.File.&#34;. This is no longer the case when a form contains more than one file part, due to this coalescing of parts into a single file. The previous behavior of using distinct files for each form part may be reenabled with the environment variable GODEBUG=multipartfiles=distinct. Users should be aware that multipart.ReadForm and the http.Request methods that call it do not limit the amount of disk consumed by temporary files. Callers can limit the size of form data with http.MaxBytesReader.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.6</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24534">CVE-2023-24534</a>
+                        </td>
+                        <td>High</td>
+                        <td>HTTP and MIME header parsing can allocate large amounts of memory, even when parsing small inputs, potentially leading to a denial of service. Certain unusual patterns of input data can cause the common function used to parse HTTP and MIME headers to allocate substantially more memory than required to hold the parsed headers. An attacker can exploit this behavior to cause an HTTP server to allocate large amounts of memory from a small request, potentially leading to memory exhaustion and a denial of service. With fix, header parsing now correctly allocates only the memory required to hold parsed headers.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.8</li>
+                                <li>1.20.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24536">CVE-2023-24536</a>
+                        </td>
+                        <td>High</td>
+                        <td>Multipart form parsing can consume large amounts of CPU and memory when processing form inputs containing very large numbers of parts. This stems from several causes: 1. mime/multipart.Reader.ReadForm limits the total memory a parsed multipart form can consume. ReadForm can undercount the amount of memory consumed, leading it to accept larger inputs than intended. 2. Limiting total memory does not account for increased pressure on the garbage collector from large numbers of small allocations in forms with many parts. 3. ReadForm can allocate a large number of short-lived buffers, further increasing pressure on the garbage collector. The combination of these factors can permit an attacker to cause an program that parses multipart forms to consume large amounts of CPU and memory, potentially resulting in a denial of service. This affects programs that use mime/multipart.Reader.ReadForm, as well as form parsing in the net/http package with the Request methods FormFile, FormValue, ParseMultipartForm, and PostFormValue. With fix, ReadForm now does a better job of estimating the memory consumption of parsed forms, and performs many fewer short-lived allocations. In addition, the fixed mime/multipart.Reader imposes the following limits on the size of parsed forms: 1. Forms parsed with ReadForm may contain no more than 1000 parts. This limit may be adjusted with the environment variable GODEBUG=multipartmaxparts=. 2. Form parts parsed with NextPart and NextRawPart may contain no more than 10,000 header fields. In addition, forms parsed with ReadForm may contain no more than 10,000 header fields across all parts. This limit may be adjusted with the environment variable GODEBUG=multipartmaxheaders=.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.8</li>
+                                <li>1.20.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24537">CVE-2023-24537</a>
+                        </td>
+                        <td>High</td>
+                        <td>Calling any of the Parse functions on Go source code which contains //line directives with very large line numbers can cause an infinite loop due to integer overflow.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.8</li>
+                                <li>1.20.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24539">CVE-2023-24539</a>
+                        </td>
+                        <td>High</td>
+                        <td>Angle brackets (&lt;&gt;) are not considered dangerous characters when inserted into CSS contexts. Templates containing multiple actions separated by a &#39;/&#39; character can result in unexpectedly closing the CSS context and allowing for injection of unexpected HTML, if executed with untrusted input.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.9</li>
+                                <li>1.20.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29400">CVE-2023-29400</a>
+                        </td>
+                        <td>High</td>
+                        <td>Templates containing actions in unquoted HTML attributes (e.g. &#34;attr={{.}}&#34;) executed with empty input can result in output with unexpected results when parsed due to HTML normalization rules. This may allow injection of arbitrary attributes into tags.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.9</li>
+                                <li>1.20.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29403">CVE-2023-29403</a>
+                        </td>
+                        <td>High</td>
+                        <td>On Unix platforms, the Go runtime does not behave differently when a binary is run with the setuid/setgid bits. This can be dangerous in certain cases, such as when dumping memory state, or assuming the status of standard i/o file descriptors. If a setuid/setgid binary is executed with standard I/O file descriptors closed, opening any files can result in unexpected content being read or written with elevated privileges. Similarly, if a setuid/setgid program is terminated, either via panic or signal, it may leak the contents of its registers.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.10</li>
+                                <li>1.20.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-39323">CVE-2023-39323</a>
+                        </td>
+                        <td>High</td>
+                        <td>Line directives (&#34;//line&#34;) can be used to bypass the restrictions on &#34;//go:cgo_&#34; directives, allowing blocked linker and compiler flags to be passed during compilation. This can result in unexpected execution of arbitrary code when running &#34;go build&#34;. The line directive requires the absolute path of the file in which the directive lives, which makes exploiting this issue significantly more complex.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.9</li>
+                                <li>1.21.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-44487">CVE-2023-44487</a>
+                        </td>
+                        <td>High</td>
+                        <td>The HTTP/2 protocol allows a denial of service (server resource consumption) because request cancellation can reset many streams quickly, as exploited in the wild in August through October 2023.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.10</li>
+                                <li>1.21.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-45285">CVE-2023-45285</a>
+                        </td>
+                        <td>High</td>
+                        <td>Using go get to fetch a module with the &#34;.git&#34; suffix may unexpectedly fallback to the insecure &#34;git://&#34; protocol if the module is unavailable via the secure &#34;https://&#34; and &#34;git+ssh://&#34; protocols, even if GOINSECURE is not set for said module. This only affects users who are not using the module proxy and are fetching modules directly (i.e. GOPROXY=off).</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.12</li>
+                                <li>1.21.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-45287">CVE-2023-45287</a>
+                        </td>
+                        <td>High</td>
+                        <td>Before Go 1.20, the RSA based TLS key exchanges used the math/big library, which is not constant time. RSA blinding was applied to prevent timing attacks, but analysis shows this may not have been fully effective. In particular it appears as if the removal of PKCS#1 padding may leak timing information, which in turn could be used to recover session key bits. In Go 1.20, the crypto/tls library switched to a fully constant time RSA implementation, which we do not believe exhibits any timing side channels.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.0</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-45288">CVE-2023-45288</a>
+                        </td>
+                        <td>High</td>
+                        <td>An attacker may cause an HTTP/2 endpoint to read arbitrary amounts of header data by sending an excessive number of CONTINUATION frames. Maintaining HPACK state requires parsing and processing all HEADERS and CONTINUATION frames on a connection. When a request&#39;s headers exceed MaxHeaderBytes, no memory is allocated to store the excess headers, but they are still parsed. This permits an attacker to cause an HTTP/2 endpoint to read arbitrary amounts of header data, all associated with a request which is going to be rejected. These headers can include Huffman-encoded data which is significantly more expensive for the receiver to decode than for an attacker to send. The fix sets a limit on the amount of excess header frames we will process before closing a connection.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.9</li>
+                                <li>1.22.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24784">CVE-2024-24784</a>
+                        </td>
+                        <td>High</td>
+                        <td>The ParseAddressList function incorrectly handles comments (text within parentheses) within display names. Since this is a misalignment with conforming address parsers, it can result in different trust decisions being made by programs using different parsers.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.8</li>
+                                <li>1.22.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24791">CVE-2024-24791</a>
+                        </td>
+                        <td>High</td>
+                        <td>The net/http HTTP/1.1 client mishandled the case where a server responds to a request with an &#34;Expect: 100-continue&#34; header with a non-informational (200 or higher) status. This mishandling could leave a client connection in an invalid state, where the next request sent on the connection will fail. An attacker sending a request to a net/http/httputil.ReverseProxy proxy can exploit this mishandling to cause a denial of service by sending &#34;Expect: 100-continue&#34; requests which elicit a non-informational response from the backend. Each such request leaves the proxy with an invalid connection, and causes one subsequent request using that connection to fail.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.12</li>
+                                <li>1.22.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-34156">CVE-2024-34156</a>
+                        </td>
+                        <td>High</td>
+                        <td>Calling Decoder.Decode on a message which contains deeply nested structures can cause a panic due to stack exhaustion. This is a follow-up to CVE-2022-30635.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.7</li>
+                                <li>1.23.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-34158">CVE-2024-34158</a>
+                        </td>
+                        <td>High</td>
+                        <td>Calling Parse on a &#34;// +build&#34; build tag line with deeply nested expressions can cause a panic due to stack exhaustion.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.7</li>
+                                <li>1.23.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-1705">CVE-2022-1705</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Acceptance of some invalid Transfer-Encoding headers in the HTTP/1 client in net/http before Go 1.17.12 and Go 1.18.4 allows HTTP request smuggling if combined with an intermediate server that also improperly fails to reject the header as invalid.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-1962">CVE-2022-1962</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Uncontrolled recursion in the Parse functions in go/parser before Go 1.17.12 and Go 1.18.4 allow an attacker to cause a panic due to stack exhaustion via deeply nested types or declarations.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-32148">CVE-2022-32148</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Improper exposure of client IP addresses in net/http before Go 1.17.12 and Go 1.18.4 can be triggered by calling httputil.ReverseProxy.ServeHTTP with a Request.Header map containing a nil value for the X-Forwarded-For header, which causes ReverseProxy to set the client IP as the value of the X-Forwarded-For header.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.12</li>
+                                <li>1.18.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-41717">CVE-2022-41717</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>An attacker can cause excessive memory growth in a Go server accepting HTTP/2 requests. HTTP/2 server connections contain a cache of HTTP header keys sent by the client. While the total number of entries in this cache is capped, an attacker sending very large keys can cause the server to allocate approximately 64 MiB per open connection.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.18.9</li>
+                                <li>1.19.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-24532">CVE-2023-24532</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The ScalarMult and ScalarBaseMult methods of the P256 Curve may return an incorrect result if called with some specific unreduced scalars (a scalar larger than the order of the curve). This does not impact usages of crypto/ecdsa or crypto/ecdh.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.7</li>
+                                <li>1.20.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29406">CVE-2023-29406</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The HTTP/1 client does not fully validate the contents of the Host header. A maliciously crafted Host header can inject additional headers or entire requests. With fix, the HTTP/1 client now refuses to send requests containing an invalid Request.Host or Request.URL.Host value.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.11</li>
+                                <li>1.20.6</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29409">CVE-2023-29409</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Extremely large RSA keys in certificate chains can cause a client/server to expend significant CPU time verifying signatures. With fix, the size of RSA keys transmitted during handshakes is restricted to &lt;= 8192 bits. Based on a survey of publicly trusted RSA keys, there are currently only three certificates in circulation with keys larger than this, and all three appear to be test certificates that are not actively deployed. It is possible there are larger keys in use in private PKIs, but we target the web PKI, so causing breakage here in the interests of increasing the default safety of users of crypto/tls seems reasonable.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.19.12</li>
+                                <li>1.20.7</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-39318">CVE-2023-39318</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The html/template package does not properly handle HTML-like &#34;&#34; comment tokens, nor hashbang &#34;#!&#34; comment tokens, in &lt;script&gt; contexts. This may cause the template parser to improperly interpret the contents of &lt;script&gt; contexts, causing actions to be improperly escaped. This may be leveraged to perform an XSS attack.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.8</li>
+                                <li>1.21.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-39319">CVE-2023-39319</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The html/template package does not apply the proper rules for handling occurrences of &#34;&lt;script&#34;, &#34;&lt;!--&#34;, and &#34;&lt;/script&#34; within JS literals in &lt;script&gt; contexts. This may cause the template parser to improperly consider script contexts to be terminated early, causing actions to be improperly escaped. This could be leveraged to perform an XSS attack.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.8</li>
+                                <li>1.21.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-39326">CVE-2023-39326</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A malicious HTTP sender can use chunk extensions to cause a receiver reading from a request or response body to read many more bytes from the network than are in the body. A malicious HTTP client can further exploit this to cause a server to automatically read a large amount of data (up to about 1GiB) when a handler fails to read the entire body of a request. Chunk extensions are a little-used HTTP feature which permit including additional metadata in a request or response body sent using the chunked encoding. The net/http chunked encoding reader discards this metadata. A sender can exploit this by inserting a large metadata segment with each byte transferred. The chunk reader now produces an error if the ratio of real body to encoded bytes grows too small.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.20.12</li>
+                                <li>1.21.5</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-45289">CVE-2023-45289</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>When following an HTTP redirect to a domain which is not a subdomain match or exact match of the initial domain, an http.Client does not forward sensitive headers such as &#34;Authorization&#34; or &#34;Cookie&#34;. For example, a redirect from foo.com to www.foo.com will forward the Authorization header, but a redirect to bar.com will not. A maliciously crafted HTTP redirect could cause sensitive headers to be unexpectedly forwarded.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.8</li>
+                                <li>1.22.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-45290">CVE-2023-45290</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>When parsing a multipart form (either explicitly with Request.ParseMultipartForm or implicitly with Request.FormValue, Request.PostFormValue, or Request.FormFile), limits on the total size of the parsed form were not applied to the memory consumed while reading a single form line. This permits a maliciously crafted input containing very long lines to cause allocation of arbitrarily large amounts of memory, potentially leading to memory exhaustion. With fix, the ParseMultipartForm function now correctly limits the maximum size of form lines.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.8</li>
+                                <li>1.22.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24783">CVE-2024-24783</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Verifying a certificate chain which contains a certificate with an unknown public key algorithm will cause Certificate.Verify to panic. This affects all crypto/tls clients, and servers that set Config.ClientAuth to VerifyClientCertIfGiven or RequireAndVerifyClientCert. The default behavior is for TLS servers to not verify client certificates.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.8</li>
+                                <li>1.22.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24785">CVE-2024-24785</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>If errors returned from MarshalJSON methods contain user controlled data, they may be used to break the contextual auto-escaping behavior of the html/template package, allowing for subsequent actions to inject unexpected content into templates.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.8</li>
+                                <li>1.22.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24787">CVE-2024-24787</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>On Darwin, building a Go module which contains CGO can trigger arbitrary code execution when using the Apple version of ld, due to usage of the -lto_library flag in a &#34;#cgo LDFLAGS&#34; directive.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.10</li>
+                                <li>1.22.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-24789">CVE-2024-24789</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The archive/zip package&#39;s handling of certain types of invalid zip files differs from the behavior of most zip implementations. This misalignment could be exploited to create an zip file with contents that vary depending on the implementation reading the file. The archive/zip package now rejects files containing these errors.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.21.11</li>
+                                <li>1.22.4</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-34155">CVE-2024-34155</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Calling any of the Parse functions on Go source code which contains deeply nested literals can cause a panic due to stack exhaustion.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.7</li>
+                                <li>1.23.1</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-45336">CVE-2024-45336</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>The HTTP client drops sensitive headers after following a cross-domain redirect. For example, a request to a.com/ containing an Authorization header which is redirected to b.com/ will not send that header to b.com. In the event that the client received a subsequent same-domain redirect, however, the sensitive headers would be restored. For example, a chain of redirects from a.com/, to b.com/1, and finally to b.com/2 would incorrectly send the Authorization header to b.com/2.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.11</li>
+                                <li>1.23.5</li>
+                                <li>1.24.0-rc.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-45341">CVE-2024-45341</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>A certificate with a URI which has a IPv6 address with a zone ID may incorrectly satisfy a URI name constraint that applies to the certificate chain. Certificates containing URIs are not permitted in the web PKI, so this only affects users of private PKIs which make use of URIs.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.11</li>
+                                <li>1.23.5</li>
+                                <li>1.24.0-rc.2</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-22866">CVE-2025-22866</a>
+                        </td>
+                        <td>Medium</td>
+                        <td>Due to the usage of a variable time instruction in the assembly implementation of an internal function, a small number of bits of secret scalars are leaked on the ppc64le architecture. Due to the way this function is used, we do not believe this leakage is enough to allow recovery of the private key when P-256 is used in any well known protocols.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.22.12</li>
+                                <li>1.23.6</li>
+                                <li>1.24.0-rc.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>stdlib</td>
+                        <td>go1.18.2</td>
+                        <td>go-module</td>
+                        <td>
+                            <a href="https://nvd.nist.gov/vuln/detail/CVE-2022-30629">CVE-2022-30629</a>
+                        </td>
+                        <td>Low</td>
+                        <td>Non-random values for ticket_age_add in session tickets in crypto/tls before Go 1.17.11 and Go 1.18.3 allow an attacker that can observe TLS handshakes to correlate successive connections by comparing ticket ages during session resumption.</td>
+                        <td>fixed</td>
+                        <td>
+                            <ul>
+                                <li>1.17.11</li>
+                                <li>1.18.3</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initializeDataTable();
+            prettyTimestamp();
+        });
+
+        function prettyTimestamp() {
+            var dateString = document.getElementById("dateElement").textContent;
+            var date = new Date(dateString);
+
+            // Format date to a more human-readable form
+            var formattedDate = date.toLocaleDateString("en-US", {
+                weekday: "long", // "Monday"
+                year: "numeric", // "2024"
+                month: "long", // "April"
+                day: "numeric", // "12"
+            });
+
+            var formattedTime = date.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true, // Use AM/PM
+            });
+
+            // Update the content of the div with formatted date and time
+            document.getElementById("dateElement").textContent =
+                formattedDate + " at " + formattedTime;
+        }
+        function initializeDataTable() {
+            var table = $('#vulnerabilityTable').DataTable({
+                responsive: true,
+                dom: '<"dataTables_wrapper"Bf>t<"dataTables_control"ip>',
+                buttons: [
+                    { extend: 'pdfHtml5', text: 'Export to PDF' }
+                ],
+                columnDefs: getColumnDefs()
+            });
+
+            setupSeverityClickHandler(table);
+        }
+
+        function getColumnDefs() {
+            return [
+                {
+                    targets: 5,
+                    className: 'none'
+                },
+                {
+                    targets: 4, // Index of 'Severity' Column
+                    render: function (data, type, row) {
+                        const severityClasses = {
+                            'Critical': 'critical',
+                            'High': 'high',
+                            'Medium': 'medium',
+                            'Low': 'low',
+                            'Unknown': 'unknown'
+                        };
+                        var className = severityClasses[data] || 'unknown';
+                        return '<span class="severity-pill ' + className + '">' + data + '</span>';
+                    }
+                },
+                {
+                    targets: 6, // Index of 'State' Column
+                    render: function (data, type, row) {
+                        const stateClasses = {
+                            'fixed': 'fixed',
+                            'not-fixed': 'not-fixed',
+                            'unknown': 'unknown',
+                            'wont-fix': 'wont-fix'
+                        };
+                        var className = stateClasses[data] || data; // Default to data if no match
+                        return '<span class="state-pill ' + className + '">' + data + '</span>';
+                    }
+                },
+                {
+                    targets: 7, // Index of 'Fixed In'
+                    createdCell: function (td, cellData, rowData, row, col) {
+                        $(td).addClass('fixed-in'); // Adds a class to support styling
+                    }
+                }
+            ];
+        }
+
+        function setupSeverityClickHandler(table) {
+            var currentFilter = '';
+            $('.severity-box').on('click', function () {
+                var severity = $(this).find('.severity-title').text().trim();
+                if (severity === currentFilter) {
+                    table.search('').columns().search('').draw();
+                    currentFilter = '';
+                    $('.severity-box').removeClass('active');
+                } else {
+                    $('.severity-box').removeClass('active');
+                    $(this).addClass('active');
+                    table.search('').columns().search('');
+                    table.column(4).search(severity).draw();
+                    currentFilter = severity;
+                }
+            });
+        }
+
+    </script>
+
+
+
+</body>
+
+</html>

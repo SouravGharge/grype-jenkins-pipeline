@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grype Scan Reports</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ccc; }
+        a { color: #007BFF; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>📋 Grype Scan Reports</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Report Label</th>
+                <th>View Report</th>
+            </tr>
+        </thead>
+        <tbody id="report-table-body">
+        </tbody>
+    </table>
+
+    <script>
+        async function loadReports() {
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const tbody = document.getElementById('report-table-body');
+            tbody.innerHTML = '';
+
+            reports.forEach(report => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${report.label}</td>
+                    <td><a href="/reports/${report.filename}" target="_blank">Open</a></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Load reports and refresh every 10 seconds
+        loadReports();
+        setInterval(loadReports, 10000);
+    </script>
+</body>
+</html>

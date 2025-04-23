@@ -22,10 +22,16 @@ pipeline {
 
         stage('Serve Flask App') {
             steps {
-                sh 'nohup python3 backend.py &'
-                sleep(time: 10, unit: "SECONDS") // Allow Flask time to start
+                sh '''
+                    echo "Starting Flask app..."
+                    nohup python3 backend.py > flask.log 2>&1 &
+                    sleep 10
+                    echo "Flask log output:"
+                    cat flask.log
+                '''
             }
         }
+
 
         stage('Archive Reports') {
             steps {
